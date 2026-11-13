@@ -58,7 +58,7 @@ object Hinglish {
     private const val NUKTA = '़'
     private val labial = setOf('प', 'फ', 'ब', 'भ', 'म')
 
-    private fun isDeva(c: Char) = c in 'ऀ'..'ॿ'
+    private fun isDeva(c: Char) = c in 'ऀ'..'ॿ' && c !in '०'..'९'
 
     private class U(var onset: String, var vowel: String?, var nasal: String = "") {
         var deleted = false
@@ -68,7 +68,7 @@ object Hinglish {
     }
 
     fun romanize(text: String): String {
-        if (text.none { isDeva(it) }) return text
+        if (text.none { it in 'ऀ'..'ॿ' }) return text
         val sb = StringBuilder()
         var i = 0
         while (i < text.length) {
