@@ -148,6 +148,7 @@ class PipelineTest {
         val fake = object : VideoSource {
             override suspend fun fetch(input: String, workDir: File, maxHeight: Int, cancelled: () -> Boolean,
                                        onProgress: (Stage, Float, String) -> Unit): SourceVideo {
+                onProgress(Stage.LINK, 1f, "Found: Test video")
                 val out = File(workDir, "source.mp4")
                 YouTubeSource().downloadAndMerge(Http.client, v, a, workDir, out, cancelled, onProgress)
                 return SourceVideo(Uri.fromFile(out), "Test video", 78, "aaaaaaaaaaa")
