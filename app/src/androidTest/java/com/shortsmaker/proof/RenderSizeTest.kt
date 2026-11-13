@@ -58,7 +58,8 @@ class RenderSizeTest {
         val (dw, dh) = if (rot == 90 || rot == 270) h to w else w to h
         note("exported ${f.name}: metadata ${w}x$h rot=$rot, track ${tw}x$th, frame ${bmp.width}x${bmp.height}, audio=$hasAudio")
         assertEquals("metadata width", 1080, dw); assertEquals("metadata height", 1920, dh)
-        assertEquals("track width", 1080, tw); assertEquals("track height", 1920, th)
+        val (ew, eh) = if (rot == 90 || rot == 270) th to tw else tw to th   // coded size, turned by the rotation flag
+        assertEquals("track width", 1080, ew); assertEquals("track height", 1920, eh)
         assertEquals("decoded frame width", 1080, bmp.width); assertEquals("decoded frame height", 1920, bmp.height)
         assertTrue("audio must be kept", hasAudio)
     }
