@@ -69,9 +69,11 @@ class ClipRenderer(private val context: Context) {
             }
             Layout.BLUR -> {
                 // Background (second sequence): same video zoomed to fill the frame and blurred. Foreground: whole picture, sharp, centred.
+                // Blur at 1/4 size (16x cheaper, looks the same), then stretch back up to full size.
                 val bgFx = Effects(emptyList(), listOf<Effect>(
-                    Presentation.createForWidthAndHeight(OUT_W, OUT_H, Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP),
-                    GaussianBlur(30f)))
+                    Presentation.createForWidthAndHeight(OUT_W / 4, OUT_H / 4, Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP),
+                    GaussianBlur(8f),
+                    Presentation.createForWidthAndHeight(OUT_W, OUT_H, Presentation.LAYOUT_STRETCH_TO_FIT)))
                 val fgH = (OUT_W.toLong() * info.displayHeight / info.displayWidth).toInt().let { it - it % 2 }.coerceAtMost(OUT_H)
                 val fgFx = Effects(emptyList(), listOf<Effect>(
                     Presentation.createForWidthAndHeight(OUT_W, fgH, Presentation.LAYOUT_SCALE_TO_FIT)))

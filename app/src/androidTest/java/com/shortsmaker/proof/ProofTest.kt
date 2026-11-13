@@ -123,11 +123,11 @@ class ProofTest {
         FileOutputStream(File(outDir(), name)).use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    private fun render(layout: Layout): File {
+    private fun render(layout: Layout, words: List<Word> = transcript.words.take(10)): File {
         val out = File(app.cacheDir, "out_${layout.name}.mp4")
         val end = info.durationMs - 200
         val t0 = System.nanoTime()
-        runBlocking { ClipRenderer(app).render(Uri.fromFile(video), info, 0, end, transcript.words, layout, out) }
+        runBlocking { ClipRenderer(app).render(Uri.fromFile(video), info, 0, end, words, layout, out) }
         note("render ${layout.name}: ${(System.nanoTime() - t0) / 1e6} ms, ${out.length() / 1024} KB")
         return out
     }
@@ -161,7 +161,8 @@ class ProofTest {
         val on = frameAt(out, tOn); savePng(on, "fill_on.png")
         val yOn = yellowCount(on)
         // captions off: shortly after the last word
-        val tOff = minOf(words.last().t1 + 450, info.durationMs - 300)
+        // only the first 10 words were given to the renderer, so 700 ms after word 10 there must be no caption
+        val tOff = words[9].t1 + 700
         val off = frameAt(out, tOff); savePng(off, "fill_off.png")
         val yOff = yellowCount(off)
         note("FILL yellow pixels: on=$yOn (t=${tOn}ms) off=$yOff (t=${tOff}ms)")
