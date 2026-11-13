@@ -8,7 +8,8 @@ import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.VideoCompositorSettings
-import androidx.media3.common.OverlaySettings
+import androidx.media3.effect.OverlaySettings
+import androidx.media3.effect.TextureOverlay
 import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.GaussianBlur
@@ -56,7 +57,7 @@ class ClipRenderer(private val context: Context) {
             .build()
 
         val caption = CaptionOverlay(words, startMs, style, OUT_W, OUT_H)
-        val captionEffect = OverlayEffect(ImmutableList.of(caption))
+        val captionEffect = OverlayEffect(ImmutableList.of<TextureOverlay>(caption))
 
         val sequences = ArrayList<EditedMediaItemSequence>()
         var compositorSettings: VideoCompositorSettings? = null
