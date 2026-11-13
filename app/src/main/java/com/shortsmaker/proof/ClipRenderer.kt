@@ -19,6 +19,7 @@ import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
+import androidx.media3.transformer.EncoderSelector
 import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
@@ -30,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.media.MediaCodecInfo
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -43,9 +45,47 @@ class ClipRenderer(private val context: Context) {
         const val OUT_H = 1920
     }
 
+    /** Set only by tests: the size the FIRST attempt asks for, to imitate a phone encoder that rounds 1080 up to 1088. */
+    @Volatile var testFirstAttemptWidth: Int? = null
+    /** Filled in for diagnostics / tests: what happened on each attempt. */
+    val attemptLog = ArrayList<String>()
+
+    /**
+     * Phone hardware encoders often only accept widths that are multiples of 16, so a request for 1080 comes out as
+     * 1088 (Media3 rounds up to what the chip supports). So: attempt 1 asks the hardware encoder for exactly 1080x1920
+     * (no automatic size change); if it refuses or the file is not exactly 1080x1920, attempt 2 uses the software H.264
+     * encoder, which has no such alignment limit. A file of any other size is never accepted.
+     */
     suspend fun render(
         source: Uri, info: VideoInfo, startMs: Long, endMs: Long, words: List<Word>, layout: Layout,
         out: File, style: CaptionStyle = CaptionStyle(), onProgress: (Int) -> Unit = {},
+    ) {
+        attemptLog.clear()
+        var lastError: Exception? = null
+        for (software in listOf(false, true)) {
+            val w = if (!software) (testFirstAttemptWidth ?: OUT_W) else OUT_W
+            try {
+                renderOnce(source, info, startMs, endMs, words, layout, out, style, w, OUT_H, software, onProgress)
+                val c = VideoInfo.read(context, Uri.fromFile(out))
+                attemptLog.add("${if (software) "software" else "hardware"} encoder: ${c.displayWidth}x${c.displayHeight}")
+                if (c.displayWidth == OUT_W && c.displayHeight == OUT_H) return
+                lastError = ProcessingException("Short came out at the wrong size (${c.displayWidth}x${c.displayHeight}).")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: CancelledException) {
+                throw e
+            } catch (e: Exception) {
+                attemptLog.add("${if (software) "software" else "hardware"} encoder failed: ${e.message}")
+                lastError = e
+            }
+            out.delete()
+        }
+        throw (lastError as? ProcessingException) ?: ProcessingException("Could not create the video.", lastError)
+    }
+
+    private suspend fun renderOnce(
+        source: Uri, info: VideoInfo, startMs: Long, endMs: Long, words: List<Word>, layout: Layout,
+        out: File, style: CaptionStyle, OUT_W: Int, OUT_H: Int, software: Boolean, onProgress: (Int) -> Unit,
     ) = withContext(Dispatchers.Main) {
         if (endMs <= startMs) throw ProcessingException("The clip has no length.")
         out.parentFile?.mkdirs()
@@ -97,7 +137,14 @@ class ClipRenderer(private val context: Context) {
 
         val encoderFactory = DefaultEncoderFactory.Builder(context)
             .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(6_000_000).build())
-            .setEnableFallback(true)
+            .setEnableFallback(false)   // never let the encoder silently change the size
+            .also { b ->
+                if (software) b.setVideoEncoderSelector(EncoderSelector { mime ->
+                    val all = EncoderSelector.DEFAULT.selectEncoderInfos(mime)
+                    val sw = all.filter { it.isSoftwareOnly }
+                    ImmutableList.copyOf(if (sw.isNotEmpty()) sw else all)
+                })
+            }
             .build()
 
         suspendCancellableCoroutine<Unit> { cont ->

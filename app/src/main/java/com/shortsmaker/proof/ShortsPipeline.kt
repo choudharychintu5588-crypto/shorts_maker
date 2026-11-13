@@ -146,10 +146,6 @@ class ShortsPipeline(private val context: Context, private val youtube: VideoSou
                 renderer.render(video.uri, info, m.startMs, m.endMs, inRange, s.layout, out, style) { p ->
                     onProgress(Stage.RENDER, (n + p / 100f) / moments.size, "Creating Short $idx of ${moments.size}... $p%")
                 }
-                val check = VideoInfo.read(context, Uri_fromFile(out))
-                if (check.displayWidth != ClipRenderer.OUT_W || check.displayHeight != ClipRenderer.OUT_H) {
-                    throw ProcessingException("Short $idx came out at the wrong size (${check.displayWidth}x${check.displayHeight}).")
-                }
                 val ti = Titles.make(m, inRange)
                 results.add(ShortResult(idx, out, m.startMs, m.endMs, m.score, ti.title, ti.hashtags, ti.description,
                     inRange.joinToString(" ") { it.text }, m.reason))

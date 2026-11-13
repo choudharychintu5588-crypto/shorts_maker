@@ -88,7 +88,7 @@ jobs:
           script: |
             adb logcat -c
             ./gradlew --no-daemon connectedDebugAndroidTest || echo "TESTS_FAILED" > test_failed.flag
-            adb logcat -d -s PROOF:I Mux:I Download:W PIPE:I YTLIVE:I ShortsNative:I AndroidRuntime:E > logcat_proof.txt || true
+            adb logcat -d -s PROOF:I Mux:I Download:W PIPE:I SIZE:I YTLIVE:I ShortsNative:I AndroidRuntime:E > logcat_proof.txt || true
             mkdir -p proof_out
             adb pull /sdcard/Android/data/com.shortsmaker.proof/files/proof proof_out/ || true
             test ! -f test_failed.flag
