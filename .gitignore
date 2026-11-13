@@ -1,0 +1,8 @@
+build/
+.gradle/
+local.properties
+*.pcm
+app/src/androidTest/assets/model.bin
+app/src/androidTest/assets/test.mp4
+build-host/
+.idea/
