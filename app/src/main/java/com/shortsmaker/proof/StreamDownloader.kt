@@ -74,7 +74,7 @@ object StreamDownloader {
             } catch (e: CancelledException) {
                 throw e
             } catch (e: Exception) {
-                failures++
+                failures++; android.util.Log.w("Download", "attempt failed: $e")
                 if (failures > 5) throw ProcessingException("The download kept failing. Check your internet connection and try again.", e)
                 try { Thread.sleep(1000L * failures) } catch (_: InterruptedException) { throw CancelledException() }
             }
