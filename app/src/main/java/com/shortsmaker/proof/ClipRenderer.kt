@@ -8,7 +8,7 @@ import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.VideoCompositorSettings
-import androidx.media3.effect.OverlaySettings
+import androidx.media3.common.OverlaySettings
 import androidx.media3.effect.TextureOverlay
 import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
@@ -68,21 +68,22 @@ class ClipRenderer(private val context: Context) {
                 sequences.add(EditedMediaItemSequence.Builder(EditedMediaItem.Builder(mediaItem).setEffects(fx).build()).build())
             }
             Layout.BLUR -> {
-                // Background: same video zoomed to fill the frame and blurred. Foreground: whole picture, sharp, centred.
+                // Background (second sequence): same video zoomed to fill the frame and blurred. Foreground: whole picture, sharp, centred.
                 val bgFx = Effects(emptyList(), listOf<Effect>(
                     Presentation.createForWidthAndHeight(OUT_W, OUT_H, Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP),
                     GaussianBlur(30f)))
                 val fgH = (OUT_W.toLong() * info.displayHeight / info.displayWidth).toInt().let { it - it % 2 }.coerceAtMost(OUT_H)
                 val fgFx = Effects(emptyList(), listOf<Effect>(
                     Presentation.createForWidthAndHeight(OUT_W, fgH, Presentation.LAYOUT_SCALE_TO_FIT)))
-                sequences.add(EditedMediaItemSequence.Builder(
-                    EditedMediaItem.Builder(mediaItem).setRemoveAudio(true).setEffects(bgFx).build()).build())
+                // The compositor draws the FIRST sequence on top, so the sharp foreground (with the audio) goes first.
                 sequences.add(EditedMediaItemSequence.Builder(
                     EditedMediaItem.Builder(mediaItem).setEffects(fgFx).build()).build())
+                sequences.add(EditedMediaItemSequence.Builder(
+                    EditedMediaItem.Builder(mediaItem).setRemoveAudio(true).setEffects(bgFx).build()).build())
                 compositorSettings = object : VideoCompositorSettings {
                     override fun getOutputSize(inputSizes: List<Size>): Size = Size(OUT_W, OUT_H)
                     override fun getOverlaySettings(inputId: Int, presentationTimeUs: Long): OverlaySettings =
-                        OverlaySettings.Builder().build()
+                        object : OverlaySettings {}  // centred, natural size
                 }
             }
         }
