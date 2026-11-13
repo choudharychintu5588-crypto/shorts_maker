@@ -29,4 +29,26 @@ object Exporter {
         }
         return uri
     }
+
+    /** Saves the ZIP into the phone's Downloads/ShortsMaker folder. */
+    fun saveToDownloads(context: Context, file: File, displayName: String): Uri {
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, displayName)
+            put(MediaStore.Downloads.MIME_TYPE, "application/zip")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/ShortsMaker")
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw ProcessingException("Could not save to Downloads (is the storage full?).")
+        try {
+            resolver.openOutputStream(uri)!!.use { o -> file.inputStream().use { it.copyTo(o) } }
+            values.clear(); values.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+        } catch (e: Exception) {
+            resolver.delete(uri, null, null)
+            throw ProcessingException("Could not save the ZIP file.", e)
+        }
+        return uri
+    }
 }

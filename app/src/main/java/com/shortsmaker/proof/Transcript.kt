@@ -9,6 +9,16 @@ data class Transcript(val language: String, val segments: List<Segment>) {
     val words: List<Word> get() = segments.flatMap { it.words }
     val fullText: String get() = segments.joinToString(" ") { it.text.trim() }
 
+    fun toJson(): String {
+        val segs = org.json.JSONArray()
+        for (s in segments) {
+            val ws = org.json.JSONArray()
+            for (w in s.words) ws.put(org.json.JSONObject().put("w", w.text).put("t0", w.t0).put("t1", w.t1))
+            segs.put(org.json.JSONObject().put("t0", s.t0).put("t1", s.t1).put("text", s.text).put("words", ws))
+        }
+        return org.json.JSONObject().put("language", language).put("segments", segs).toString()
+    }
+
     companion object {
         fun parse(json: String): Transcript {
             val o = JSONObject(json)
