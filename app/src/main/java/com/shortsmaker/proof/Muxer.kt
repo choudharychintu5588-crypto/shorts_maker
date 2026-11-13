@@ -39,6 +39,8 @@ object Mux {
             val buf = ByteBuffer.allocateDirect(8 * 1024 * 1024)
             val info = MediaCodec.BufferInfo()
             var vDone = false
+            var vCount = 0; var aCount = 0
+            android.util.Log.i("Mux", "video fmt=${vEx.getTrackFormat(vt)} audio fmt=${aEx.getTrackFormat(at)} firstA=${aEx.sampleTime} firstV=${vEx.sampleTime}")
             var aDone = false
             while (!(vDone && aDone)) {
                 if (cancelled()) throw CancelledException()
@@ -54,8 +56,11 @@ object Mux {
                 val flags = if (ex.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0
                 info.set(0, n, ex.sampleTime, flags)
                 m.writeSampleData(idx, buf, info)
+                if (useVideo) vCount++ else aCount++
                 ex.advance()
             }
+            android.util.Log.i("Mux", "written video=$vCount audio=$aCount")
+            if (aCount == 0) throw ProcessingException("The downloaded sound stream had no sound.")
         } catch (e: ProcessingException) {
             throw e
         } catch (e: CancelledException) {
