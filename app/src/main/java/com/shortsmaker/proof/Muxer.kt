@@ -44,8 +44,8 @@ object Mux {
             var aDone = false
             while (!(vDone && aDone)) {
                 if (cancelled()) throw CancelledException()
-                val vTime = if (vDone) Long.MAX_VALUE else vEx.sampleTime.also { if (it < 0) vDone = true }
-                val aTime = if (aDone) Long.MAX_VALUE else aEx.sampleTime.also { if (it < 0) aDone = true }
+                val vTime = if (vDone) Long.MAX_VALUE else vEx.sampleTime.also { if (it == -1L) vDone = true }
+                val aTime = if (aDone) Long.MAX_VALUE else aEx.sampleTime.also { if (it == -1L) aDone = true }
                 if (vDone && aDone) break
                 val useVideo = !vDone && (aDone || vTime <= aTime)
                 val ex = if (useVideo) vEx else aEx
@@ -54,7 +54,7 @@ object Mux {
                 val n = ex.readSampleData(buf, 0)
                 if (n < 0) { if (useVideo) vDone = true else aDone = true; continue }
                 val flags = if (ex.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0
-                info.set(0, n, ex.sampleTime, flags)
+                info.set(0, n, maxOf(0L, ex.sampleTime), flags)   // AAC priming gives a tiny negative first time
                 m.writeSampleData(idx, buf, info)
                 if (useVideo) vCount++ else aCount++
                 ex.advance()
